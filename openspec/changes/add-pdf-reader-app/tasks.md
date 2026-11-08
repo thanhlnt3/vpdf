@@ -3,10 +3,12 @@
 ## 1. Nền tảng dự án
 
 - [ ] 1.1 Tạo Cargo workspace gồm `vpdf-core`, `vpdf-render`, `vpdf-search`, `vpdf-ocr`, `vpdf-sign`, `vpdf-cli`, `vpdf-app`; xác minh bằng `cargo build --workspace` chạy được trên Windows và macOS
+  - Tạm hoãn (2026-11-08): bỏ qua phần macOS theo quyết định của chủ dự án; CI chỉ chạy Windows x64.
   - Trạng thái (2026-11-08): workspace đủ 7 crate (+ `tools/vpdf-testdata`, `tools/vpdf-license-check`); `cargo build --workspace` đã chạy được trên **Windows 10 x64**. Chưa xác minh trên macOS (job `build-test` cho macos-14/macos-13 trong `.github/workflows/ci.yml` chưa chạy).
 - [ ] 1.2 Thêm `deny.toml` (danh sách license cho phép) và `third_party/native.toml`, chạy `cargo deny check licenses` trong CI; xác minh bằng một PR thử thêm crate GPL thì CI thất bại
   - Trạng thái: có `deny.toml`, `third_party/native.toml`, `third_party/license-exceptions.toml`, công cụ `vpdf-license-check` và job `licenses` trong CI. Đã xác minh cục bộ: `cargo deny check licenses` đạt; test `tools/vpdf-license-check/tests/cargo_deny.rs` cho thấy crate AGPL, GPL gián tiếp (A → B) và crate không rõ license làm kiểm tra thất bại. Chưa xác minh bằng một PR thật trên CI. `vpdf-license-check` hiện **thất bại có chủ ý**: 8 ngoại lệ (FreeType, libpng, IJG…, MSVC runtime) chưa có người duyệt — xem QUESTIONS.md.
 - [ ] 1.3 Tích hợp PDFium dựng sẵn cho win-x64, mac-arm64, mac-x64 (universal qua `lipo`); xác minh bằng test dựng trang 1 của file mẫu trên cả ba kiến trúc trong CI
+  - Tạm hoãn (2026-11-08): bỏ qua phần macOS theo quyết định của chủ dự án; CI chỉ chạy Windows x64.
   - Trạng thái: PDFium chromium/8138 (win-x64) đã tích hợp qua `pdfium-render`; test dựng trang 1 (`renders_page_one_of_sample`) đạt trên Windows x64. `scripts/fetch-native.sh` tải mac-arm64, mac-x64 và ghép universal bằng `lipo` (kèm SHA-256), nhưng chưa chạy trên macOS/CI.
 - [x] 1.4 Tích hợp qpdf (C API) và lopdf; xác minh bằng test mở, ghi lại và chạy `qpdf --check` trên bộ file mẫu
   - Đã xác minh (Windows x64): qpdf 12.4.2 nạp qua C API (`vpdf_core::qpdf`), lopdf 0.47; `crates/vpdf-core/tests/structure.rs` mở, kiểm tra, ghi lại bằng qpdf và lopdf rồi chạy `qpdf --check` trên bộ file mẫu — đạt.
@@ -93,6 +95,7 @@
 
 - [ ] 12.1 MSI ký Authenticode, cài im lặng, thêm `vpdf` vào PATH; xác minh trên máy ảo Windows 10 22H2 và Windows 11 mới cài
 - [ ] 12.2 DMG universal ký Developer ID và đã notarize; xác minh chạy native trên M1 và Intel với macOS 13, Gatekeeper không cảnh báo
+  - Tạm hoãn (2026-11-08): bỏ qua phần macOS theo quyết định của chủ dự án; CI chỉ chạy Windows x64.
 - [ ] 12.3 Giao diện tiếng Việt và tiếng Anh; xử lý đường dẫn tiếng Việt, đường dẫn dài và tên file NFD; xác minh bằng test tự động trên cả hai hệ điều hành
 - [ ] 12.4 Sinh `THIRD_PARTY_NOTICES` (cargo-about) và SBOM (cargo-cyclonedx), mục Giới thiệu → Giấy phép bên thứ ba, `vpdf --licenses`; xác minh danh sách khớp cây phụ thuộc
 - [ ] 12.5 Workflow phát hành GitHub Actions tạo release kèm `SHA256SUMS.txt`, có bước chặn khi vượt ngưỡng hiệu năng (3 giây, 1 GB); xác minh bằng một bản phát hành thử
