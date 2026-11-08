@@ -3643,7 +3643,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vpdf-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "eframe",
  "egui",
@@ -3660,14 +3660,14 @@ dependencies = [
 
 [[package]]
 name = "vpdf-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "vpdf-core",
 ]
 
 [[package]]
 name = "vpdf-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "libloading 0.8.9",
  "lopdf",
@@ -3678,7 +3678,7 @@ dependencies = [
 
 [[package]]
 name = "vpdf-license-check"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "toml",
@@ -3686,11 +3686,11 @@ dependencies = [
 
 [[package]]
 name = "vpdf-ocr"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "vpdf-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "memory-stats",
  "pdfium-render",
@@ -3700,7 +3700,7 @@ dependencies = [
 
 [[package]]
 name = "vpdf-search"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "unicode-normalization",
  "vpdf-core",
@@ -3709,11 +3709,11 @@ dependencies = [
 
 [[package]]
 name = "vpdf-sign"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "vpdf-testdata"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "image",
  "lopdf",
