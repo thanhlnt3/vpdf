@@ -54,3 +54,13 @@ Chế độ tự động: `vpdf-app --screenshot shots/now.png` và `vpdf-app --
 | Alt+← | Quay lại (sau khi bấm link, mục lục, ảnh thu nhỏ, nhảy trang) |
 | Ctrl/Cmd+C | Sao chép chữ đã chọn (kéo chuột trái trên trang để chọn) |
 | Chuột giữa kéo | Kéo trang |
+
+## Giấy phép
+
+VPdf được phát hành theo lựa chọn của bạn một trong hai giấy phép:
+
+- MIT ([LICENSE-MIT](LICENSE-MIT))
+- Apache License 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+
+Trừ khi bạn nói rõ khác đi, mọi đóng góp bạn gửi vào dự án được cấp phép theo cả hai giấy phép trên, không kèm điều khoản bổ sung.
+Thành phần bên thứ ba (PDFium, qpdf, Noto Sans…) giữ giấy phép riêng của chúng, xem `third_party/`.
