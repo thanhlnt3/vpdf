@@ -6,7 +6,8 @@
 //! gọi PDFium, nên nhiều worker chạy cùng lúc vẫn an toàn.
 //!
 //! Hàng đợi ưu tiên: lệnh điều khiển (mở, lấy chữ, lấy link) → ô ảnh trang đang
-//! nhìn thấy → ảnh thu nhỏ. Danh sách ô ảnh và ảnh thu nhỏ được giao diện **thay
+//! nhìn thấy → trích chữ cho lượt tìm đang chờ → ảnh thu nhỏ → trích chữ nền cho
+//! chỉ mục tìm kiếm (design.md D4). Danh sách ô ảnh và ảnh thu nhỏ được giao diện **thay
 //! mới** mỗi khi vùng xem đổi, nên việc tạo ảnh thu nhỏ không bao giờ chặn việc đọc.
 
 use pdfium_render::prelude::*;
@@ -152,12 +153,20 @@ enum Control {
     Links(u32),
 }
 
+/// Nơi nhận lớp chữ của các trang được trích cho chỉ mục tìm kiếm.
+pub type TextSink = Box<dyn Fn(u32, PageText) + Send>;
+
 #[derive(Default)]
 struct Queue {
     control: VecDeque<Control>,
     tiles: Vec<TileKey>,
     thumbs: Vec<u32>,
     thumb_width: u32,
+    /// Trang còn chờ trích chữ cho chỉ mục, theo thứ tự sẽ trích.
+    index: VecDeque<u32>,
+    /// Có lượt tìm đang chờ chữ: trích trước ảnh thu nhỏ.
+    index_urgent: bool,
+    index_sink: Option<TextSink>,
     shutdown: bool,
     /// Ô vừa dựng xong, để không dựng lại khi giao diện chưa kịp nhận kết quả.
     recent_done: HashMap<TileKey, Instant>,
@@ -231,6 +240,21 @@ impl DocumentWorker {
         self.push_control(Control::Links(page));
     }
 
+    /// Bắt đầu trích chữ nền cho chỉ mục tìm kiếm, theo thứ tự `order`
+    /// (thường: trang đang đọc rồi các trang gần nó).
+    pub fn start_indexing(&self, sink: TextSink, order: Vec<u32>) {
+        let (m, cv) = &*self.shared;
+        let mut q = m.lock().unwrap();
+        q.index = order.into();
+        q.index_sink = Some(sink);
+        cv.notify_one();
+    }
+
+    /// Tay cầm để luồng tìm đổi thứ tự trích chữ.
+    pub fn index_handle(&self) -> IndexHandle {
+        IndexHandle { shared: self.shared.clone() }
+    }
+
     pub fn try_recv(&self) -> Option<Event> {
         self.events.try_recv().ok()
     }
@@ -245,6 +269,54 @@ impl DocumentWorker {
         let q = self.shared.0.lock().unwrap();
         (q.control.len(), q.tiles.len(), q.thumbs.len())
     }
+}
+
+/// Đổi thứ tự trích chữ cho chỉ mục từ luồng khác (luồng tìm).
+#[derive(Clone)]
+pub struct IndexHandle {
+    shared: Arc<(Mutex<Queue>, Condvar)>,
+}
+
+impl IndexHandle {
+    /// `Some(p)`: lượt tìm đang chờ trang `p` — trích các trang từ `p` trở đi theo thứ tự
+    /// trang, trước ảnh thu nhỏ. `None`: trở lại trích nền bình thường.
+    pub fn prioritize(&self, from: Option<u32>) {
+        let (m, cv) = &*self.shared;
+        let mut q = m.lock().unwrap();
+        match from {
+            Some(p) => {
+                let mut v: Vec<u32> = q.index.drain(..).collect();
+                v.sort_by_key(|&x| (x < p, x));
+                q.index = v.into();
+                q.index_urgent = true;
+            }
+            None => q.index_urgent = false,
+        }
+        cv.notify_one();
+    }
+
+    /// Số trang còn chờ trích cho chỉ mục.
+    pub fn pending(&self) -> usize {
+        self.shared.0.lock().unwrap().index.len()
+    }
+}
+
+/// Thứ tự trích nền: trang `current`, rồi xen kẽ các trang sau và trước nó.
+pub fn index_order(page_count: u32, current: u32) -> Vec<u32> {
+    let n = page_count as i64;
+    if n == 0 {
+        return Vec::new();
+    }
+    let c = (current as i64).min(n - 1);
+    let mut v = vec![c as u32];
+    for d in 1..n {
+        for p in [c + d, c - d] {
+            if (0..n).contains(&p) {
+                v.push(p as u32);
+            }
+        }
+    }
+    v
 }
 
 impl Drop for DocumentWorker {
@@ -267,6 +339,7 @@ enum Job {
     Control(Control),
     Tile(TileKey),
     Thumb(u32, u32),
+    Index(u32),
 }
 
 fn next_job(shared: &(Mutex<Queue>, Condvar), doc_open: bool) -> Option<Job> {
@@ -285,9 +358,19 @@ fn next_job(shared: &(Mutex<Queue>, Condvar), doc_open: bool) -> Option<Job> {
                 q.recent_done.insert(k, Instant::now());
                 return Some(Job::Tile(k));
             }
+            if q.index_urgent && q.index_sink.is_some() {
+                if let Some(p) = q.index.pop_front() {
+                    return Some(Job::Index(p));
+                }
+            }
             if !q.thumbs.is_empty() {
                 let p = q.thumbs.remove(0);
                 return Some(Job::Thumb(p, q.thumb_width));
+            }
+            if q.index_sink.is_some() {
+                if let Some(p) = q.index.pop_front() {
+                    return Some(Job::Index(p));
+                }
             }
         }
         q = cv.wait(q).unwrap();
@@ -424,6 +507,18 @@ fn serve(doc: &PdfDocument<'_>, shared: &(Mutex<Queue>, Condvar), send: &dyn Fn(
             }
             Job::Tile(k) => cache.get(k.page).and_then(|page| render_tile(page, k)).map(|img| send(Event::Tile(k, img))),
             Job::Thumb(p, w) => cache.get(p).and_then(|page| render_thumb(page, w)).map(|img| send(Event::Thumb(p, img))),
+            Job::Index(p) => {
+                // Nạp riêng, không qua bộ nhớ đệm trang (tránh đẩy trang đang đọc ra).
+                let text = match doc.pages().get(p as PdfPageIndex) {
+                    Ok(page) => extract_text(&page),
+                    Err(_) => PageText::default(),
+                };
+                let q = shared.0.lock().unwrap();
+                if let Some(sink) = &q.index_sink {
+                    sink(p, text);
+                }
+                Ok(())
+            }
         };
         if let Err(e) = r {
             send(Event::Failed(format!("{e:?}")));

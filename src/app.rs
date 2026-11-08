@@ -22,6 +22,8 @@ use vpdf_core::links::LinkTarget;
 pub enum SideTab {
     Thumbnails,
     Outline,
+    /// Danh sách kết quả tìm.
+    Search,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,6 +42,18 @@ pub struct Hud {
     pub tab_titles: Vec<String>,
     pub thumbnails_drawn: usize,
     pub window_title: String,
+    /// Bộ đếm cạnh ô tìm ("4 / 12", "Không tìm thấy"…).
+    pub search_counter: String,
+    /// Thông báo trang không có chữ ("15 trang không có chữ để tìm. Chạy OCR?").
+    pub search_message: Option<String>,
+    /// Các dòng của danh sách kết quả đang vẽ: (chỉ số kết quả, vùng trên màn hình).
+    pub search_rows: Vec<(usize, Rect)>,
+    /// Số kết quả được tô sáng trên các trang đang hiển thị ở khung hình gần nhất.
+    pub highlights_drawn: usize,
+    /// Vùng tô sáng (trên màn hình) của kết quả đang chọn, nếu đang thấy.
+    pub current_hit_rects: Vec<Rect>,
+    /// Vùng xem trang.
+    pub viewer_rect: Option<Rect>,
 }
 
 pub struct VpdfApp {
@@ -57,6 +71,11 @@ pub struct VpdfApp {
     last_current_page: Option<(u64, usize)>,
     scroll_thumbs_to_current: bool,
     page_box_id: Id,
+    search_box_id: Id,
+    /// (tab, lượt tìm) đã thấy gần nhất, để mở bảng kết quả khi có lượt tìm mới.
+    last_search: (u64, u64),
+    /// (tab, lượt tìm, kết quả) đang chọn gần nhất, để cuộn danh sách tới dòng đó.
+    last_search_row: Option<(u64, u64, usize)>,
 }
 
 impl VpdfApp {
@@ -77,11 +96,37 @@ impl VpdfApp {
             last_current_page: None,
             scroll_thumbs_to_current: false,
             page_box_id: Id::new("page-box"),
+            search_box_id: Id::new("search-box"),
+            last_search: (0, 0),
+            last_search_row: None,
         }
     }
 
     pub fn page_box_id(&self) -> Id {
         self.page_box_id
+    }
+
+    pub fn search_box_id(&self) -> Id {
+        self.search_box_id
+    }
+
+    /// Mỗi khung hình: gửi lượt tìm khi đủ thời gian chờ; mở bảng kết quả khi có lượt mới.
+    fn search_tick(&mut self, ctx: &Context) {
+        let Some(tab) = self.tabs.active_mut() else { return };
+        if !tab.is_ready() {
+            return;
+        }
+        if let Some(d) = tab.search_tick(Instant::now()) {
+            ctx.request_repaint_after(d);
+        }
+        let key = (tab.id, tab.search.id);
+        if key != self.last_search {
+            self.last_search = key;
+            if tab.search.is_active() {
+                self.side = SideTab::Search;
+                self.show_side = true;
+            }
+        }
     }
 
     /// Mở file trong tab mới (hoặc chuyển sang tab đang mở file đó).
@@ -166,6 +211,8 @@ impl VpdfApp {
         self.poll_tabs(&ctx);
         self.handle_dropped_files(&ctx);
         self.handle_keys(&ctx);
+        self.search_tick(&ctx);
+        self.hud.search_rows.clear();
         self.update_title(&ctx);
 
         Panel::top("menu").show(ui, |ui| self.menu_bar(ui));
@@ -179,6 +226,9 @@ impl VpdfApp {
         }
         let mut vout = ViewerOutput::default();
         egui::CentralPanel::no_frame().show(ui, |ui| self.central(ui, &mut vout));
+        self.hud.highlights_drawn = vout.highlights;
+        self.hud.current_hit_rects = std::mem::take(&mut vout.current_hit_rects);
+        self.hud.viewer_rect = vout.rect;
 
         // Ảnh thu nhỏ: trang đang hiện trong bảng bên trước, rồi trang đang đọc (làm hình tạm).
         if let Some(tab) = self.tabs.active_mut() {
@@ -265,9 +315,21 @@ impl VpdfApp {
         if !typing && ctx.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Copy))) {
             self.copy(ctx);
         }
+        if cmd(Key::F) {
+            let id = self.search_box_id;
+            ctx.memory_mut(|m| m.request_focus(id));
+        }
         let Some(tab) = self.tabs.active_mut() else { return };
         if !tab.is_ready() {
             return;
+        }
+        // F3 / Shift+F3: kết quả sau / trước (cả khi đang gõ trong ô tìm).
+        if ctx.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::F3)) {
+            tab.search_next(false);
+        }
+        if ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::F3)) {
+            tab.search_submit_now(Instant::now());
+            tab.search_next(true);
         }
         let v = &mut tab.view;
         if cmd(Key::Equals) || cmd(Key::Plus) {
@@ -518,6 +580,46 @@ impl VpdfApp {
             if layout != tab.view.layout() {
                 tab.view.set_layout(layout);
             }
+
+            // ----- ô tìm (specs/text-search) -----
+            ui.separator();
+            let now = Instant::now();
+            let search_id = self.search_box_id;
+            // Enter / Shift+Enter trong ô tìm: kết quả sau / trước, ô vẫn giữ tiêu điểm.
+            if ui.memory(|mem| mem.has_focus(search_id)) {
+                if ui.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::Enter)) {
+                    tab.search_next(false);
+                } else if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
+                    if tab.search.due_in(now).is_some() {
+                        // Chưa hết 150 ms: tìm ngay, kết quả đầu tiên sẽ được chọn.
+                        tab.search_submit_now(now);
+                    } else {
+                        tab.search_next(true);
+                    }
+                }
+            }
+            let mut text = tab.search.input.clone();
+            let r = ui.add(TextEdit::singleline(&mut text).id(search_id).hint_text(m::SEARCH_HINT).desired_width(200.0));
+            if r.changed() {
+                tab.search.set_input(&text, now);
+            }
+            let counter = tab.search.counter();
+            self.hud.search_counter = counter.clone();
+            self.hud.search_message = tab.search.no_text_message();
+            ui.add_sized([96.0, 20.0], egui::Label::new(counter));
+            let has_hits = !tab.search.hits.is_empty();
+            if ui.add_enabled(has_hits, egui::Button::new("‹")).on_hover_text(m::PREV_RESULT).clicked() {
+                tab.search_next(false);
+            }
+            if ui.add_enabled(has_hits, egui::Button::new("›")).on_hover_text(m::NEXT_RESULT).clicked() {
+                tab.search_next(true);
+            }
+            ui.menu_button(m::SEARCH_OPTIONS, |ui| {
+                let o = &mut tab.search.opts;
+                ui.checkbox(&mut o.match_diacritics, m::MATCH_DIACRITICS);
+                ui.checkbox(&mut o.match_case, m::MATCH_CASE);
+                ui.checkbox(&mut o.whole_word, m::WHOLE_WORD);
+            });
         });
     }
 
@@ -525,6 +627,7 @@ impl VpdfApp {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.side, SideTab::Thumbnails, m::THUMBNAILS);
             ui.selectable_value(&mut self.side, SideTab::Outline, m::OUTLINE);
+            ui.selectable_value(&mut self.side, SideTab::Search, m::SEARCH_RESULTS);
         });
         ui.separator();
         let Some(tab) = self.tabs.active_mut() else { return };
@@ -608,6 +711,14 @@ impl VpdfApp {
                     }
                 }
             },
+            SideTab::Search => {
+                let mut ocr_clicked = false;
+                let rows = search_results(ui, tab, &mut self.last_search_row, &mut ocr_clicked);
+                self.hud.search_rows = rows;
+                if ocr_clicked {
+                    self.toast(m::OCR_NOT_YET);
+                }
+            }
         }
     }
 
@@ -753,6 +864,91 @@ fn outline_tree(ui: &mut Ui, nodes: &[OutlineNode], target: &mut Option<LinkTarg
                 .body(|ui| outline_tree(ui, &n.children, target, depth + 1));
         }
     }
+}
+
+/// Số ký tự đứng trước phần khớp được hiện trong một dòng kết quả.
+const SNIPPET_BEFORE_CHARS: usize = 12;
+
+/// Bảng "Kết quả tìm": bộ đếm, thông báo trang không có chữ, danh sách kết quả kèm số
+/// trang và đoạn chữ xung quanh. Trả về các dòng đã vẽ (cho kiểm thử).
+fn search_results(
+    ui: &mut Ui,
+    tab: &mut DocTab,
+    last_row: &mut Option<(u64, u64, usize)>,
+    ocr_clicked: &mut bool,
+) -> Vec<(usize, Rect)> {
+    let mut drawn = Vec::new();
+    let s = &tab.search;
+    if !s.is_active() {
+        ui.label(RichText::new(m::NO_SEARCH_YET).weak());
+        return drawn;
+    }
+    ui.label(RichText::new(s.counter()).strong());
+    if let Some(msg) = s.no_text_message() {
+        egui::Frame::new().fill(Color32::from_rgb(255, 236, 170)).inner_margin(6.0).show(ui, |ui| {
+            ui.colored_label(Color32::from_rgb(90, 60, 0), &msg);
+            if ui.button(m::RUN_OCR).clicked() {
+                *ocr_clicked = true;
+            }
+        });
+    }
+    ui.separator();
+    let row_h = 44.0;
+    let n = s.hits.len();
+    let mut sa = ScrollArea::vertical().id_salt(("search-results", tab.id)).auto_shrink([false, false]);
+    // Giữ dòng đang chọn trong tầm nhìn khi kết quả đang chọn đổi.
+    let key = s.current.map(|c| (tab.id, s.id, c));
+    if key.is_some() && key != *last_row {
+        *last_row = key;
+        let c = s.current.unwrap() as f32;
+        sa = sa.vertical_scroll_offset((c * row_h - 2.0 * row_h).max(0.0));
+    }
+    let mut clicked = None;
+    let text_col = ui.visuals().text_color();
+    sa.show_rows(ui, row_h, n, |ui, range| {
+        for i in range {
+            let h = &tab.search.hits[i];
+            let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), row_h - 4.0), Sense::click());
+            let r = resp.rect;
+            if tab.search.current == Some(i) {
+                painter.rect_filled(r, CornerRadius::same(3), Color32::from_rgb(210, 226, 252));
+            } else if resp.hovered() {
+                painter.rect_filled(r, CornerRadius::same(3), Color32::from_gray(235));
+            }
+            painter.text(
+                r.min + Vec2::new(6.0, 3.0),
+                Align2::LEFT_TOP,
+                format!("{} {}", m::PAGE_LABEL, h.page + 1),
+                FontId::proportional(12.0),
+                Color32::from_gray(110),
+            );
+            let mut job = egui::text::LayoutJob::default();
+            let f = FontId::proportional(13.0);
+            let plain = egui::TextFormat { font_id: f.clone(), color: text_col, ..Default::default() };
+            let mark = egui::TextFormat { font_id: f, color: Color32::BLACK, background: Color32::from_rgb(255, 214, 64), ..Default::default() };
+            // Bảng bên hẹp: chỉ giữ ít chữ phía trước để phần khớp luôn nhìn thấy.
+            let before: Vec<char> = h.snippet.before.chars().collect();
+            let keep = SNIPPET_BEFORE_CHARS.min(before.len());
+            let mut lead: String = before[before.len() - keep..].iter().collect();
+            if keep < before.len() {
+                lead.insert(0, '…');
+            }
+            job.append(&lead, 0.0, plain.clone());
+            job.append(&h.snippet.matched, 0.0, mark);
+            job.append(&h.snippet.after, 0.0, plain);
+            job.wrap = egui::text::TextWrapping::truncate_at_width(r.width() - 12.0);
+            let galley = ui.fonts_mut(|fo| fo.layout_job(job));
+            painter.galley(r.min + Vec2::new(6.0, 20.0), galley, text_col);
+            if resp.clicked() {
+                clicked = Some(i);
+            }
+            drawn.push((i, r));
+        }
+    });
+    if let Some(i) = clicked {
+        tab.search_select(i);
+    }
+    drawn
 }
 
 fn empty_state(ui: &mut Ui) {

@@ -37,6 +37,8 @@ enum Phase {
     CheckZoom,
     TypePage,
     CheckPage,
+    Search,
+    CheckSearch,
     Hud,
     Done,
 }
@@ -117,7 +119,16 @@ impl Automation {
     }
 
     fn screenshot(&mut self, app: &mut VpdfApp, ctx: &Context, path: &PathBuf) {
-        let ready = Self::viewer_ready(app) && app.active().is_some_and(|t| t.worker.pending().1 == 0);
+        // Tùy chọn khi phát triển: VPDF_SCREENSHOT_SEARCH="chuỗi" gõ chuỗi đó vào ô tìm
+        // trước khi chụp, để xem cách tô sáng kết quả.
+        let query = std::env::var("VPDF_SCREENSHOT_SEARCH").ok().filter(|q| !q.is_empty());
+        if let (Some(q), Some(t)) = (&query, app.active_mut()) {
+            if t.is_ready() && t.search.input != *q {
+                t.search.set_input(q, std::time::Instant::now());
+            }
+        }
+        let searched = query.is_none() || app.active().is_some_and(|t| t.search.done);
+        let ready = Self::viewer_ready(app) && searched && app.active().is_some_and(|t| t.worker.pending().1 == 0);
         let timeout = self.start.elapsed() > Duration::from_secs(25);
         if !self.shot_requested && self.frame >= SCREENSHOT_FRAMES && (ready || timeout) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(Default::default()));
@@ -269,6 +280,41 @@ impl Automation {
                     ok,
                     format!("gõ 30 vào ô số trang + Enter: đang ở trang {}, ô hiện \"{}\"", t.view.current_page() + 1, app.hud.page_box),
                 );
+                self.set_phase(Phase::Search);
+            }
+            Phase::Search => {
+                // Ctrl+F rồi gõ không dấu "hop dong", không nhấn Enter (tìm khi đang gõ).
+                if self.phase_frame == 1 {
+                    self.inject.push(key(Key::F, Modifiers::COMMAND, true));
+                    self.inject.push(key(Key::F, Modifiers::COMMAND, false));
+                }
+                if self.phase_frame == 4 {
+                    self.inject.push(Event::Text("hop dong".into()));
+                }
+                let found = app.active().is_some_and(|t| t.search.done && t.search.current.is_some());
+                if (found && !app.hud.current_hit_rects.is_empty()) || self.phase_frame > 600 {
+                    self.set_phase(Phase::CheckSearch);
+                }
+            }
+            Phase::CheckSearch => {
+                let t = app.active().unwrap();
+                let s = &t.search;
+                let first = s.current_hit().map(|h| (h.page + 1, h.snippet.matched.clone()));
+                let ok = s.input == "hop dong"
+                    && first.as_ref().is_some_and(|(_, m)| m.to_lowercase() == "hợp đồng")
+                    && !app.hud.current_hit_rects.is_empty()
+                    && app.hud.search_counter == format!("1 / {}", s.hits.len());
+                self.push(
+                    "act",
+                    ok,
+                    format!(
+                        "gõ \"hop dong\" vào ô tìm (không Enter): {} kết quả, kết quả đầu \"{}\" ở trang {} được tô sáng, bộ đếm \"{}\"",
+                        s.hits.len(),
+                        first.as_ref().map_or("", |f| f.1.as_str()),
+                        first.as_ref().map_or(0, |f| f.0),
+                        app.hud.search_counter
+                    ),
+                );
                 self.set_phase(Phase::Hud);
             }
             Phase::Hud => {
@@ -281,13 +327,20 @@ impl Automation {
                     let mut it = h.page_box.split(" / ");
                     matches!((it.next(), it.next()), (Some(a), Some(b)) if a.parse::<u32>().is_ok() && b.parse::<u32>().is_ok())
                 };
-                let ok = page_ok && h.zoom.contains('%') && !h.tab_titles.is_empty() && h.thumbnails_drawn > 0;
+                let ok = page_ok && h.zoom.contains('%') && !h.tab_titles.is_empty() && !h.search_counter.is_empty();
                 self.push(
                     "hud",
                     ok,
                     format!(
-                        "ô số trang \"{}\", mức phóng \"{}\", tab {:?}, {} ảnh thu nhỏ, tiêu đề cửa sổ \"{}\"",
-                        h.page_box, h.zoom, h.tab_titles, h.thumbnails_drawn, h.window_title
+                        "ô số trang \"{}\", mức phóng \"{}\", tab {:?}, bộ đếm tìm \"{}\", {} kết quả tô sáng, {} dòng kết quả, {} ảnh thu nhỏ, tiêu đề cửa sổ \"{}\"",
+                        h.page_box,
+                        h.zoom,
+                        h.tab_titles,
+                        h.search_counter,
+                        h.highlights_drawn,
+                        h.search_rows.len(),
+                        h.thumbnails_drawn,
+                        h.window_title
                     ),
                 );
                 // Gộp hai lần đo của bước "act".

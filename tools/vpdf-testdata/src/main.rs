@@ -2,6 +2,7 @@
 //!
 //! Lệnh:
 //!   vpdf-testdata generate [--dir D]   tạo toàn bộ file và ghi MANIFEST
+//!   vpdf-testdata generate-search      chỉ tạo file của nhóm 3 (search-vi, scan-mix-20), thêm vào MANIFEST
 //!   vpdf-testdata fetch    [--dir D]   tải về từ $VPDF_TESTDATA_URL rồi kiểm tra mã băm;
 //!                                      nếu chưa có URL thì tạo tại chỗ rồi kiểm tra
 //!   vpdf-testdata verify   [--dir D]   kiểm tra mã băm theo MANIFEST
@@ -361,6 +362,88 @@ fn add_outline_and_links(input: &Path, out: &Path, spec: &TextDocSpec) -> Result
 }
 
 // ---------------------------------------------------------------------------
+// Tài liệu cho nhóm task 3 (specs/text-search)
+
+/// Một dòng chữ: (trang, y tính từ đáy trang, nội dung).
+type Line = (usize, f32, String);
+
+/// Tạo PDF bằng PDFium từ danh sách dòng chữ; trang nằm trong `image_pages` chỉ có
+/// một ảnh "scan" (không có lớp chữ). Ghi lại bằng lopdf với ngày tạo cố định.
+fn make_lines_doc(pages: usize, lines: &[Line], image_pages: &[usize], out: &Path) -> Result<(), String> {
+    let pdfium = vpdf_render::pdfium()?;
+    let font_data = font_bytes();
+    let mut doc = pdfium.create_new_pdf().map_err(|e| format!("{e:?}"))?;
+    let font = doc.fonts_mut().load_true_type_from_bytes(&font_data, true).map_err(|e| format!("{e:?}"))?;
+    for i in 0..pages {
+        let mut page = doc.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).map_err(|e| format!("{e:?}"))?;
+        page.set_content_regeneration_strategy(PdfPageContentRegenerationStrategy::Manual);
+        if image_pages.contains(&i) {
+            let jpg = jpeg_scan(620, 877, 500 + i as u64);
+            let mut img = PdfPageImageObject::new_from_jpeg_reader(&doc, Cursor::new(jpg)).map_err(|e| format!("{e:?}"))?;
+            img.scale(595.0, 842.0).map_err(|e| format!("{e:?}"))?;
+            page.objects_mut().add_image_object(img).map_err(|e| format!("{e:?}"))?;
+        } else {
+            for (_, y, text) in lines.iter().filter(|l| l.0 == i) {
+                page.objects_mut()
+                    .create_text_object(PdfPoints::new(56.0), PdfPoints::new(*y), text, font, PdfPoints::new(12.0))
+                    .map_err(|e| format!("{e:?}"))?;
+            }
+        }
+        page.regenerate_content().map_err(|e| format!("{e:?}"))?;
+    }
+    let tmp = out.with_extension("pdfium.tmp");
+    doc.save_to_file(&tmp).map_err(|e| format!("{e:?}"))?;
+    drop(doc);
+    let mut d = Document::load(&tmp).map_err(|e| e.to_string())?;
+    finalize(&mut d);
+    d.save(out).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(&tmp);
+    Ok(())
+}
+
+/// `search-vi.pdf`: chứa đúng các cụm trong các scenario của specs/text-search.
+/// "điều khoản" xuất hiện đúng 12 lần (trang 2–6), "Việt" ở dòng 5 được ghi ở dạng
+/// tổ hợp (e + dấu mũ + dấu nặng), "trách nhiệm" / "hữu hạn" bị ngắt dòng.
+pub fn search_doc_lines() -> Vec<Line> {
+    let mut l: Vec<Line> = vec![
+        (0, 780.0, "Tài liệu mẫu cho chức năng tìm chữ".into()),
+        (0, 750.0, "Căn cứ Nghị định số 13/2023/NĐ-CP của Chính phủ.".into()),
+        (0, 720.0, "Văn phòng tại Đà Nẵng, mặt tiền đường Bạch Đằng.".into()),
+        (0, 690.0, "Mẫu hợp đồng, Hợp Đồng thuê nhà và hop dong mua xe.".into()),
+        (0, 660.0, "Tiếng Vi\u{65}\u{302}\u{323}t ghi ở dạng tổ hợp.".into()),
+        (0, 630.0, "Giá: ban đầu, bán lẻ, bàn ghế.".into()),
+        (0, 600.0, "Từ an toàn và tiếng bang.".into()),
+        (0, 570.0, "Công ty trách nhiệm".into()),
+        (0, 555.0, "hữu hạn Minh Phát được thành lập.".into()),
+        (0, 525.0, "Công ty trách   nhiệm   hữu   hạn Hòa Bình.".into()),
+    ];
+    // 12 lần "điều khoản" ở các trang 2–6, ở nhiều độ cao để phải cuộn tới.
+    let spots: [(usize, f32); 12] =
+        [(1, 760.0), (1, 420.0), (1, 120.0), (2, 700.0), (2, 380.0), (2, 90.0), (3, 600.0), (3, 200.0), (4, 650.0), (4, 150.0), (5, 500.0), (5, 100.0)];
+    for (k, (p, y)) in spots.iter().enumerate() {
+        let lead = if k % 2 == 0 { "Điều khoản" } else { "Các điều khoản" };
+        l.push((*p, *y, format!("{lead} số {} của văn bản mẫu.", k + 1)));
+    }
+    for p in 1..6 {
+        l.push((p, 40.0, format!("Trang {} / 6", p + 1)));
+    }
+    l
+}
+
+fn make_search_doc(out: &Path) -> Result<(), String> {
+    make_lines_doc(6, &search_doc_lines(), &[], out)
+}
+
+/// `scan-mix-20.pdf`: 20 trang, chỉ các trang 1, 5, 9, 13, 17 có lớp chữ; 15 trang còn lại chỉ có ảnh.
+fn make_mixed_doc(out: &Path) -> Result<(), String> {
+    let text_pages = [0usize, 4, 8, 12, 16];
+    let lines: Vec<Line> =
+        text_pages.iter().map(|&p| (p, 760.0, format!("Trang chữ số {}: nội dung hợp đồng mẫu.", p + 1))).collect();
+    let images: Vec<usize> = (0..20).filter(|p| !text_pages.contains(p)).collect();
+    make_lines_doc(20, &lines, &images, out)
+}
+
+// ---------------------------------------------------------------------------
 // Tài liệu scan (lopdf, mỗi trang một ảnh JPEG xám, không có lớp chữ)
 
 fn make_scan_doc(pages: usize, out: &Path) -> Result<(), String> {
@@ -523,7 +606,16 @@ const PLAN: &[Plan] = &[
     Plan { name: "no-copy.pdf", purpose: "Mở không cần mật khẩu nhưng cấm sao chép và in; mật khẩu chủ sở hữu chusohuu456", deterministic: false },
     Plan { name: "broken-xref.pdf", purpose: "Bảng xref lệch vị trí nhưng các trang vẫn khôi phục được", deterministic: true },
     Plan { name: "not-a-pdf.pdf", purpose: "Đuôi .pdf nhưng nội dung không phải PDF", deterministic: true },
+    Plan { name: "search-vi.pdf", purpose: "6 trang chứa các cụm của specs/text-search (không dấu, chữ đ, dấu tổ hợp, ngắt dòng, 12 lần \"điều khoản\")", deterministic: true },
+    Plan { name: "scan-mix-20.pdf", purpose: "20 trang, 15 trang chỉ có ảnh (không có lớp chữ), 5 trang có chữ", deterministic: true },
 ];
+
+/// Tạo các file của nhóm task 3 (nhỏ, nhanh).
+fn generate_search(dir: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    make_search_doc(&dir.join("search-vi.pdf"))?;
+    make_mixed_doc(&dir.join("scan-mix-20.pdf"))
+}
 
 fn generate(dir: &Path) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -549,6 +641,8 @@ fn generate(dir: &Path) -> Result<(), String> {
     step("broken-xref.pdf / not-a-pdf.pdf");
     make_broken_xref(&dir.join("small-vi.pdf"), &dir.join("broken-xref.pdf"))?;
     make_not_pdf(&dir.join("not-a-pdf.pdf"))?;
+    step("search-vi.pdf / scan-mix-20.pdf");
+    generate_search(dir)?;
     step("xong");
     Ok(())
 }
@@ -642,10 +736,22 @@ fn main() {
             }
             Ok(())
         }),
+        // Chỉ tạo các file của nhóm 3 và thêm chúng vào MANIFEST (giữ nguyên mục cũ).
+        "generate-search" => generate_search(&dir).and_then(|_| {
+            let mut m: Manifest = serde_json::from_slice(&std::fs::read(manifest_path()).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+            for p in PLAN.iter().filter(|p| p.name == "search-vi.pdf" || p.name == "scan-mix-20.pdf") {
+                let (sha, bytes) = sha256_file(&dir.join(p.name)).map_err(|e| format!("{}: {e}", p.name))?;
+                m.files.retain(|e| e.name != p.name);
+                m.files.push(Entry { name: p.name.into(), sha256: sha, bytes, deterministic: p.deterministic, purpose: p.purpose.into() });
+                println!("{:<16} {:>11} byte", p.name, bytes);
+            }
+            std::fs::write(manifest_path(), serde_json::to_vec_pretty(&m).unwrap()).map_err(|e| e.to_string())
+        }),
         "verify" => verify(&dir, args.iter().any(|a| a == "--strict")),
         "fetch" => fetch(&dir),
         _ => {
-            println!("vpdf-testdata generate|fetch|verify [--dir DIR] [--strict]");
+            println!("vpdf-testdata generate|generate-search|fetch|verify [--dir DIR] [--strict]");
             Ok(())
         }
     };

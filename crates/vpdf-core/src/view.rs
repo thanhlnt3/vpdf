@@ -532,6 +532,56 @@ impl ViewState {
         self.clamp();
     }
 
+    /// Có nhìn thấy trọn vùng (x0, y0)–(x1, y1) (point, tính từ góc trên trái trang) không.
+    pub fn is_visible(&self, page: usize, x0: f32, y0: f32, x1: f32, y1: f32) -> bool {
+        if self.layout == LayoutMode::SinglePage && page != self.single_page {
+            return false;
+        }
+        let (sx0, sy0) = self.page_to_screen(page, x0, y0);
+        let (sx1, sy1) = self.page_to_screen(page, x1, y1);
+        sx0 >= 0.0 && sy0 >= 0.0 && sx1 <= self.viewport_w && sy1 <= self.viewport_h
+    }
+
+    /// Cuộn để vùng (x0, y0)–(x1, y1) của trang hiện ra (dùng cho kết quả tìm).
+    /// Đã nhìn thấy trọn thì không cuộn; nếu không thì đặt vùng ở khoảng 1/3 chiều cao
+    /// vùng xem, và cuộn ngang vừa đủ khi trang rộng hơn vùng xem.
+    pub fn reveal(&mut self, page: usize, x0: f32, y0: f32, x1: f32, y1: f32) {
+        let page = page.min(self.pages.len() - 1);
+        if self.is_visible(page, x0, y0, x1, y1) {
+            return;
+        }
+        if self.layout == LayoutMode::SinglePage && page != self.single_page {
+            self.single_page = page;
+            self.after_single_page_change();
+        }
+        let s = self.scale();
+        let top = self.page_top(page) + y0 * s;
+        let h = (y1 - y0) * s;
+        self.scroll_y = top - ((self.viewport_h - h) / 3.0).max(0.0);
+        let left = self.page_left(page) + x0 * s;
+        let right = self.page_left(page) + x1 * s;
+        if left < self.scroll_x {
+            self.scroll_x = left - 24.0;
+        } else if right > self.scroll_x + self.viewport_w {
+            self.scroll_x = right - self.viewport_w + 24.0;
+        }
+        self.clamp();
+        // Ô số trang hiện trang của kết quả, kể cả khi kết quả nằm sát mép trên trang.
+        let anchor = self.current_page_unanchored() != page && self.page_visible_at_all(page);
+        self.anchor_page = if anchor { Some(page) } else { None };
+    }
+
+    fn current_page_unanchored(&self) -> usize {
+        match self.layout {
+            LayoutMode::SinglePage => self.single_page,
+            LayoutMode::Continuous => self.page_at_content_y(self.scroll_y + (self.viewport_h * 0.1).min(PAGE_GAP * 4.0)),
+        }
+    }
+
+    fn page_visible_at_all(&self, page: usize) -> bool {
+        self.page_top(page) < self.scroll_y + self.viewport_h && self.page_bottom(page) > self.scroll_y
+    }
+
     pub fn next_page(&mut self) {
         let c = self.current_page();
         if c + 1 < self.pages.len() {
@@ -767,5 +817,25 @@ mod tests {
         let vis = v.visible_pages();
         assert!(vis.len() <= 3, "chỉ vài trang được dựng, có {}", vis.len());
         assert!(vis.iter().any(|p| p.index == 250));
+    }
+
+    /// text-search: cuộn tới kết quả tìm — đã thấy thì không cuộn, chưa thấy thì đưa vào vùng xem.
+    #[test]
+    fn reveal_scrolls_only_when_needed() {
+        let mut v = doc(500);
+        v.goto_page(0);
+        let before = v.scroll();
+        v.reveal(0, 100.0, 100.0, 200.0, 112.0);
+        assert_eq!(v.scroll(), before, "đã nhìn thấy: không cuộn");
+        v.reveal(209, 100.0, 700.0, 200.0, 712.0);
+        assert!(v.is_visible(209, 100.0, 700.0, 200.0, 712.0));
+        assert_eq!(v.current_page(), 209);
+        v.set_zoom(4.0);
+        v.reveal(3, 500.0, 300.0, 560.0, 312.0);
+        assert!(v.is_visible(3, 500.0, 300.0, 560.0, 312.0), "cuộn ngang khi trang rộng hơn vùng xem");
+        v.set_layout(LayoutMode::SinglePage);
+        v.reveal(7, 50.0, 50.0, 90.0, 62.0);
+        assert_eq!(v.current_page(), 7);
+        assert!(v.is_visible(7, 50.0, 50.0, 90.0, 62.0));
     }
 }

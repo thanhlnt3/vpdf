@@ -178,6 +178,84 @@
       "group": "controls",
       "value": "middle-drag",
       "estimated": true
+    },
+    {
+      "name": "search debounce",
+      "group": "search",
+      "value": 150,
+      "unit": "ms",
+      "source": "specs/text-search/spec.md: Tìm khi đang gõ"
+    },
+    {
+      "name": "first result limit",
+      "group": "search",
+      "value": 500,
+      "unit": "ms",
+      "source": "specs/text-search/spec.md: Kết quả đầu tiên hiện nhanh"
+    },
+    {
+      "name": "default match diacritics",
+      "group": "search",
+      "value": false,
+      "source": "specs/text-search/spec.md: Tìm không phân biệt dấu tiếng Việt"
+    },
+    {
+      "name": "default match case",
+      "group": "search",
+      "value": false,
+      "source": "specs/text-search/spec.md: Tìm không phân biệt dấu tiếng Việt"
+    },
+    {
+      "name": "default whole word",
+      "group": "search",
+      "value": false,
+      "estimated": true
+    },
+    {
+      "name": "scan order",
+      "group": "search",
+      "value": "page 1 to last page",
+      "source": "specs/text-search/spec.md: Kết quả MUST hiện dần theo thứ tự trang"
+    },
+    {
+      "name": "search slice",
+      "group": "search",
+      "value": 8,
+      "unit": "ms",
+      "estimated": true
+    },
+    {
+      "name": "snippet context",
+      "group": "search",
+      "value": 32,
+      "unit": "chars",
+      "estimated": true
+    },
+    {
+      "name": "snippet chars before match in list",
+      "group": "search",
+      "value": 12,
+      "unit": "chars",
+      "estimated": true
+    },
+    {
+      "name": "result row height",
+      "group": "search",
+      "value": 44,
+      "unit": "logical px",
+      "estimated": true
+    },
+    {
+      "name": "find key",
+      "group": "controls",
+      "value": "Ctrl/Cmd + F",
+      "estimated": true
+    },
+    {
+      "name": "next / previous result keys",
+      "group": "controls",
+      "value": "Enter / Shift+Enter, F3 / Shift+F3",
+      "source": "specs/text-search/spec.md: Hiển thị và duyệt kết quả"
     }
   ]
 }

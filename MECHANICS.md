@@ -44,6 +44,25 @@ Cùng các giá trị nằm trong `mechanics.json`; trong mã chúng là hằng 
 | Ngưỡng mở file 500 trang | < 3 giây (đo được 66 ms, bộ nhớ đệm ổ đĩa nóng) | spec performance |
 | Ngưỡng RAM | < 1 GB (đo được tối đa 392 MB khi dựng 500 trang) | spec performance |
 
+## Tìm chữ (nhóm 3)
+
+Hằng số ở `crates/vpdf-search/src/session.rs`, `engine.rs`, `page.rs`, `src/app.rs`, `src/viewer.rs`.
+
+| Giá trị | Số | Nguồn |
+|---|---|---|
+| Chờ sau lần gõ cuối rồi mới tìm | 150 ms | spec text-search "Tìm khi đang gõ" |
+| Kết quả đầu tiên hiện sau lần gõ cuối | < 500 ms (đo được 210–231 ms trên file 500 trang vừa mở) | spec "Kết quả đầu tiên hiện nhanh" |
+| Tùy chọn mặc định | bỏ dấu, không phân biệt hoa thường, không khớp nguyên từ | spec "Tìm không phân biệt dấu tiếng Việt" |
+| Thứ tự quét | trang 1 → trang cuối | spec ("theo thứ tự trang"); xem QUESTIONS.md 15 |
+| Thứ tự trích chữ nền | trang đang đọc, rồi xen kẽ trang sau/trước; lượt tìm đang chờ thì từ trang nó cần | design D4 |
+| Luồng tìm kiểm tra lượt mới sau mỗi | 8 ms quét | ước lượng |
+| Chữ lấy thêm mỗi bên cho đoạn xung quanh | 32 ký tự (danh sách hiện 12 ký tự phía trước) | ước lượng |
+| Dòng trong danh sách kết quả | cao 44 điểm | ước lượng |
+| Enter ở kết quả cuối | về kết quả đầu (khi đã quét xong) | ước lượng (QUESTIONS.md 16) |
+| Phím | Ctrl/Cmd+F vào ô tìm; Enter / Shift+Enter, F3 / Shift+F3 | spec (Enter, F3); Ctrl+F ước lượng |
+
+Chuỗi lấy đúng từ spec: "Không tìm thấy" · "N trang không có chữ để tìm. Chạy OCR?" · bộ đếm "4 / 12", "4 / 37…".
+
 ## File gần đây
 
 | Giá trị | Số | Nguồn |

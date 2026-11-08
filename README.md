@@ -2,7 +2,7 @@
 
 Ứng dụng đọc PDF desktop viết bằng Rust + egui, dựng hình bằng PDFium, theo OpenSpec trong
 `openspec/changes/add-pdf-reader-app` (bản sao trong thư mục này; `tasks.md` ở đây được đánh dấu
-tiến độ). Lượt này làm **nhóm task 1 (nền tảng)** và **nhóm 2 (đọc tài liệu)**.
+tiến độ). Đã làm **nhóm task 1 (nền tảng)**, **nhóm 2 (đọc tài liệu)** và **nhóm 3 (tìm chữ)**.
 
 ## Cấu trúc
 
@@ -10,8 +10,9 @@ tiến độ). Lượt này làm **nhóm task 1 (nền tảng)** và **nhóm 2 (
 |---|---|
 | `src/` (crate `vpdf-app`) | Ứng dụng desktop: tab, thanh công cụ, ô số trang, phóng, bảng ảnh thu nhỏ / mục lục, vùng xem, hộp thoại |
 | `crates/vpdf-core` | Lõi dùng chung không phụ thuộc giao diện: vùng xem, ô số trang, lịch sử Quay lại, file gần đây, chọn/sao chép chữ, kiểm tra xref, LRU, qpdf (C API), lopdf |
-| `crates/vpdf-render` | PDFium: một luồng worker mỗi tài liệu, ô ảnh 512×512, ảnh thu nhỏ, lớp chữ, link, mục lục |
-| `crates/vpdf-search`, `vpdf-ocr`, `vpdf-sign` | Chỗ giữ chỗ cho nhóm 3, 9, 10 |
+| `crates/vpdf-render` | PDFium: một luồng worker mỗi tài liệu, ô ảnh 512×512, ảnh thu nhỏ, lớp chữ, link, mục lục, trích chữ nền cho tìm kiếm |
+| `crates/vpdf-search` | Tìm chữ (design.md D4): chuẩn hóa bỏ dấu kèm bảng ánh xạ về chữ gốc, luồng tìm chạy nền theo thứ tự trang, trạng thái ô tìm (chờ 150 ms, bộ đếm, kết quả sau/trước) |
+| `crates/vpdf-ocr`, `vpdf-sign` | Chỗ giữ chỗ cho nhóm 9, 10 |
 | `crates/vpdf-cli` | CLI `vpdf` (lượt này chỉ có `--version`, `--help`) |
 | `tools/vpdf-testdata` | Tạo / tải / kiểm tra mã băm bộ tài liệu tham chiếu |
 | `tools/vpdf-license-check` | Kiểm tra license thư viện native, font, dữ liệu và ngoại lệ đã duyệt |
@@ -33,7 +34,7 @@ macOS: `scripts/fetch-native.sh` (hoặc `mac-universal` để ghép bằng `lip
 
 ```powershell
 scripts\fetch-testdata.ps1          # tạo hoặc tải bộ tài liệu tham chiếu rồi kiểm tra mã băm
-cargo test --workspace --release    # 80+ test: lõi, PDFium, giao diện, qpdf/lopdf, license
+cargo test --workspace --release    # ~120 test: lõi, PDFium, tìm chữ, giao diện, qpdf/lopdf, license
 tools\bin\cargo-deny check licenses # hoặc cargo deny check licenses
 cargo run -p vpdf-license-check     # hiện thất bại có chủ ý: ngoại lệ chưa có người duyệt (QUESTIONS.md)
 ```
@@ -53,6 +54,8 @@ Chế độ tự động: `vpdf-app --screenshot shots/now.png` và `vpdf-app --
 | Ctrl/Cmd + 0 / 1 / 2 | Vừa trang / Kích thước thật / Vừa chiều rộng |
 | Alt+← | Quay lại (sau khi bấm link, mục lục, ảnh thu nhỏ, nhảy trang) |
 | Ctrl/Cmd+C | Sao chép chữ đã chọn (kéo chuột trái trên trang để chọn) |
+| Ctrl/Cmd+F | Đưa con trỏ vào ô tìm (tìm ngay khi ngừng gõ 150 ms, gõ không dấu vẫn ra chữ có dấu) |
+| Enter / Shift+Enter, F3 / Shift+F3 | Kết quả tìm sau / trước |
 | Chuột giữa kéo | Kéo trang |
 
 ## Giấy phép

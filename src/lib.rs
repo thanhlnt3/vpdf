@@ -1,8 +1,9 @@
 //! Ứng dụng desktop VPdf (egui/eframe, backend wgpu — design.md D1).
 //!
-//! Lượt này hiện thực nhóm task 2 (`document-viewing`): mở file (hộp thoại, kéo thả,
-//! tham số dòng lệnh từ liên kết loại file, danh sách gần đây), hỏi mật khẩu, báo
-//! lỗi file hỏng, tab, cuộn/phóng, ảnh thu nhỏ, mục lục, link, chọn và sao chép chữ.
+//! Nhóm task 2 (`document-viewing`): mở file (hộp thoại, kéo thả, tham số dòng lệnh từ
+//! liên kết loại file, danh sách gần đây), hỏi mật khẩu, báo lỗi file hỏng, tab,
+//! cuộn/phóng, ảnh thu nhỏ, mục lục, link, chọn và sao chép chữ.
+//! Nhóm task 3 (`text-search`): ô tìm khi đang gõ, tô sáng kết quả, danh sách kết quả.
 
 pub mod app;
 pub mod automation;

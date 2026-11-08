@@ -57,6 +57,20 @@
       "bytes": 1520,
       "deterministic": true,
       "purpose": "Đuôi .pdf nhưng nội dung không phải PDF"
+    },
+    {
+      "name": "search-vi.pdf",
+      "sha256": "ac0c644f5bdb544d0eb193623ffbc3a015b09dbdfe0243d05d34a9f97db60826",
+      "bytes": 338915,
+      "deterministic": true,
+      "purpose": "6 trang chứa các cụm của specs/text-search (không dấu, chữ đ, dấu tổ hợp, ngắt dòng, 12 lần \"điều khoản\")"
+    },
+    {
+      "name": "scan-mix-20.pdf",
+      "sha256": "7a476ced51a3e708ddf12d1ee07b266057ca4b7b1e7edd338354c2a9350642b1",
+      "bytes": 1367017,
+      "deterministic": true,
+      "purpose": "20 trang, 15 trang chỉ có ảnh (không có lớp chữ), 5 trang có chữ"
     }
   ]
 }

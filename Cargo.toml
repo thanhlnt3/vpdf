@@ -58,6 +58,7 @@ path = "src/main.rs"
 [dependencies]
 vpdf-core.workspace = true
 vpdf-render.workspace = true
+vpdf-search.workspace = true
 eframe = { version = "0.36", default-features = false, features = ["wgpu", "accesskit", "links"] }
 egui = { version = "0.36", default-features = false }
 rfd = { version = "0.18", default-features = false }

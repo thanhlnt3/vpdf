@@ -1,4 +1,4 @@
-# Câu hỏi còn mở (nhóm task 1–2)
+# Câu hỏi còn mở (nhóm task 1–3)
 
 AGENTS.md: "Chỗ nào spec chưa rõ thì ghi câu hỏi lại, không tự đoán." Dưới đây là các điểm
 spec chưa trả lời, kèm việc đã làm tạm (nếu có) để không chặn công việc.
@@ -45,6 +45,27 @@ spec chưa trả lời, kèm việc đã làm tạm (nếu có) để không ch�
 10. **Chế độ từng trang**: cuộn quá mép trang thì sang trang kế/trước. Spec không nói; cần xác nhận.
 11. **Giao diện tiếng Anh** (task 12.3) chưa làm; chuỗi giao diện hiện là tiếng Việt, chuỗi trong spec
     được giữ đúng từng chữ.
+
+## Tìm chữ (text-search, nhóm task 3)
+
+15. **Tìm bắt đầu từ đâu?** Spec nói kết quả "hiện dần theo thứ tự trang" và "kết quả đầu tiên được
+    tô sáng và cuộn tới". Đã làm đúng chữ: quét từ trang 1 tới trang cuối, tự chọn kết quả đầu tiên
+    của tài liệu — nên đang đọc trang 200 mà tìm thì vùng xem nhảy về kết quả ở trang đầu. Nhiều trình
+    đọc khác bắt đầu từ trang đang đọc. Cần chọn: giữ như hiện tại, hay chọn kết quả đầu tiên tính
+    từ trang đang đọc (danh sách vẫn theo thứ tự trang)?
+16. **Enter ở kết quả cuối.** Đã chọn: khi đã quét xong thì quay vòng về kết quả đầu (Shift+Enter ở
+    kết quả đầu thì về kết quả cuối); khi chưa quét xong thì đứng yên chờ kết quả mới.
+17. **Nút "Chạy OCR?"** OCR thuộc nhóm 9. Hiện nút "Chạy OCR" chỉ báo "Chức năng OCR chưa có trong
+    phiên bản này". Khi làm nhóm 9 sẽ nối vào hộp thoại OCR.
+18. **Bộ đếm khi chưa có kết quả nào mà vẫn đang quét.** Spec chỉ cho ví dụ "4 / 37…". Đã dùng
+    "Đang tìm…". Khi quét xong mà không có kết quả nhưng có trang không có chữ: bộ đếm "0 / 0" và hiện
+    câu "N trang không có chữ để tìm. Chạy OCR?" (không hiện "Không tìm thấy").
+19. **Cụm nằm vắt qua hai trang** (cuối trang này, đầu trang sau) chưa được tìm thấy; spec chỉ nói ngắt
+    dòng. Gạch nối mềm cuối dòng (PDFium đánh dấu `\u{2}`) thì được nối lại.
+20. **Chữ đứng cạnh nhau khi bật Khớp nguyên từ**: "từ" là dãy chữ cái/chữ số (kể cả dấu); dấu câu,
+    khoảng trắng, "/" và "-" là ranh giới từ.
+21. **Mở bảng kết quả tự động.** Khi bắt đầu một lượt tìm, bảng bên chuyển sang thẻ "Kết quả tìm"
+    (và hiện bảng bên nếu đang ẩn) để thấy danh sách và thông báo trang không có chữ.
 
 ## Nền tảng và CI
 

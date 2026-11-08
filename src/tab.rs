@@ -11,7 +11,9 @@ use vpdf_core::lru::{ByteLru, PAGE_CACHE_BYTES};
 use vpdf_core::page_input::PageBox;
 use vpdf_core::text::{PageText, Selection};
 use vpdf_core::view::{PageSize, ViewPos, ViewState};
-use vpdf_render::{DocInfo, DocumentWorker, Event, OpenError, OutlineNode, Rgba, TileKey};
+use std::time::{Duration, Instant};
+use vpdf_render::{index_order, DocInfo, DocumentWorker, Event, OpenError, OutlineNode, Rgba, TileKey};
+use vpdf_search::{Action, Hit, SearchEngine, SearchSession};
 
 /// Giới hạn bộ nhớ cho ảnh thu nhỏ (ngoài 300 MB của ảnh trang).
 pub const THUMB_CACHE_BYTES: usize = 48 * 1024 * 1024;
@@ -52,6 +54,11 @@ pub struct DocTab {
     pub restored: bool,
     /// Mức phóng ở lần vẽ trước, để biết khi nào ô ảnh cũ không còn dùng.
     pub last_viewport: (f32, f32),
+    /// Ô tìm và kết quả của tab này (specs/text-search).
+    pub search: SearchSession,
+    /// Luồng tìm (có sau khi tài liệu mở xong).
+    pub engine: Option<SearchEngine>,
+    notify: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl DocTab {
@@ -63,7 +70,7 @@ impl DocTab {
             id,
             path: path.to_path_buf(),
             title,
-            worker: DocumentWorker::open(path, None, notify),
+            worker: DocumentWorker::open(path, None, notify.clone()),
             state: TabState::Opening,
             info: None,
             view: ViewState::new(vec![PageSize::A4]),
@@ -82,6 +89,75 @@ impl DocTab {
             warning: None,
             restored: false,
             last_viewport: (0.0, 0.0),
+            search: SearchSession::default(),
+            engine: None,
+            notify,
+        }
+    }
+
+    /// Tạo luồng tìm và bắt đầu trích chữ nền, ưu tiên trang sẽ đọc đầu tiên.
+    fn start_search_engine(&mut self, page_count: u32) {
+        let handle = self.worker.index_handle();
+        let need: vpdf_search::engine::NeedFn = Arc::new(move |p| handle.prioritize(p));
+        let engine = SearchEngine::new(page_count, need, self.notify.clone());
+        let first = self.restore_pos.map_or(0, |p| p.page as u32);
+        self.worker.start_indexing(engine.page_sink(), index_order(page_count, first));
+        self.engine = Some(engine);
+    }
+
+    /// Ô tìm: gửi lượt tìm khi đủ 150 ms sau lần gõ cuối. Trả về thời gian cần chờ
+    /// tới lần kiểm tra sau (để hẹn vẽ lại).
+    pub fn search_tick(&mut self, now: Instant) -> Option<Duration> {
+        if let Some(a) = self.search.poll(now) {
+            self.send_search(a);
+        }
+        self.search.due_in(now)
+    }
+
+    /// Enter khi chưa hết 150 ms: tìm ngay.
+    pub fn search_submit_now(&mut self, now: Instant) {
+        if let Some(a) = self.search.submit_now(now) {
+            self.send_search(a);
+        }
+    }
+
+    fn send_search(&mut self, a: Action) {
+        let Some(e) = &self.engine else { return };
+        match a {
+            Action::Search { id, query, opts } => e.search(id, &query, opts),
+            Action::Cancel => e.cancel(),
+        }
+    }
+
+    /// Cuộn để kết quả đang chọn hiện trong vùng xem.
+    pub fn reveal_hit(&mut self, hit: &Hit) {
+        let page = hit.page as usize;
+        let h = self.view.page_size(page).height;
+        let mut r: Option<(f32, f32, f32, f32)> = None;
+        for q in &hit.rects {
+            let (x0, y0, x1, y1) = (q.left, h - q.top, q.right, h - q.bottom);
+            r = Some(match r {
+                None => (x0, y0, x1, y1),
+                Some(a) => (a.0.min(x0), a.1.min(y0), a.2.max(x1), a.3.max(y1)),
+            });
+        }
+        let (x0, y0, x1, y1) = r.unwrap_or((0.0, 0.0, 1.0, 1.0));
+        self.view.reveal(page, x0, y0, x1, y1);
+        self.page_box.cancel();
+    }
+
+    pub fn search_next(&mut self, forward: bool) {
+        let hit = if forward { self.search.select_next() } else { self.search.select_prev() }.cloned();
+        if let Some(h) = hit {
+            self.reveal_hit(&h);
+        }
+    }
+
+    /// Bấm một dòng trong danh sách kết quả (ghi vào lịch sử để Quay lại được).
+    pub fn search_select(&mut self, index: usize) {
+        if let Some(h) = self.search.select(index).cloned() {
+            self.history.push(self.view.pos());
+            self.reveal_hit(&h);
         }
     }
 
@@ -121,6 +197,9 @@ impl DocTab {
                     if info.repaired {
                         self.warning = Some(vpdf_core::messages::REPAIRED_WARNING.to_string());
                     }
+                    if self.engine.is_none() {
+                        self.start_search_engine(info.page_sizes.len() as u32);
+                    }
                     self.info = Some(info);
                     self.state = TabState::Ready;
                 }
@@ -151,6 +230,16 @@ impl DocTab {
                     self.links.insert(p, l);
                 }
                 Event::Failed(_) => {}
+            }
+        }
+        let now = Instant::now();
+        while let Some(out) = self.engine.as_ref().and_then(|e| e.try_recv()) {
+            changed = true;
+            // Kết quả đầu tiên: tô sáng và cuộn tới.
+            if self.search.apply(out, now) {
+                if let Some(h) = self.search.current_hit().cloned() {
+                    self.reveal_hit(&h);
+                }
             }
         }
         changed

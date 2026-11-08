@@ -3655,6 +3655,7 @@ dependencies = [
  "unicode-normalization",
  "vpdf-core",
  "vpdf-render",
+ "vpdf-search",
 ]
 
 [[package]]
@@ -3700,6 +3701,11 @@ dependencies = [
 [[package]]
 name = "vpdf-search"
 version = "0.1.0"
+dependencies = [
+ "unicode-normalization",
+ "vpdf-core",
+ "vpdf-render",
+]
 
 [[package]]
 name = "vpdf-sign"

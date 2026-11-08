@@ -41,3 +41,28 @@ pub const COPIED: &str = "Đã sao chép";
 pub const LOADING: &str = "Đang mở…";
 pub const PAGE_LABEL: &str = "Trang";
 pub const NO_TEXT_ON_PAGE: &str = "Trang này không có lớp chữ";
+
+// ----- text-search (nhóm task 3) -----
+
+/// text-search › Không có kết quả.
+pub const NOT_FOUND: &str = "Không tìm thấy";
+/// Bộ đếm khi đang tìm mà chưa có kết quả nào.
+pub const SEARCHING: &str = "Đang tìm…";
+pub const SEARCH_HINT: &str = "Tìm trong tài liệu (Ctrl+F)";
+pub const SEARCH_RESULTS: &str = "Kết quả tìm";
+pub const SEARCH_OPTIONS: &str = "Tùy chọn tìm";
+/// text-search › Tùy chọn tìm chính xác.
+pub const MATCH_DIACRITICS: &str = "Phân biệt dấu";
+pub const MATCH_CASE: &str = "Phân biệt hoa thường";
+pub const WHOLE_WORD: &str = "Khớp nguyên từ";
+pub const PREV_RESULT: &str = "Kết quả trước (Shift+Enter, Shift+F3)";
+pub const NEXT_RESULT: &str = "Kết quả sau (Enter, F3)";
+pub const RUN_OCR: &str = "Chạy OCR";
+/// OCR thuộc nhóm task 9, chưa có ở bản này.
+pub const OCR_NOT_YET: &str = "Chức năng OCR chưa có trong phiên bản này";
+pub const NO_SEARCH_YET: &str = "Gõ chữ vào ô tìm để xem kết quả";
+
+/// text-search › PDF scan: "15 trang không có chữ để tìm. Chạy OCR?"
+pub fn no_text_pages(n: usize) -> String {
+    format!("{n} trang không có chữ để tìm. Chạy OCR?")
+}

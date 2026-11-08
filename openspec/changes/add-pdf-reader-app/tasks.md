@@ -30,13 +30,16 @@
 - [x] 2.6 Link nội bộ cùng lệnh Quay lại, link URL hỏi xác nhận; chọn và sao chép chữ dạng NFC, chặn sao chép khi tài liệu cấm; xác minh bằng test tự động
   - Đã xác minh: link nội bộ + Quay lại (Alt+←), link URL hỏi "Mở liên kết này trong trình duyệt?", kéo chọn + sao chép NFC, chặn sao chép với file cấm sao chép (mở bằng mật khẩu chủ sở hữu thì được).
 - [ ] 2.7 Đo khởi động nguội với file 500 trang trong CI; xác minh dưới 3 giây trên runner tham chiếu
-  - Trạng thái: test `open_500_pages_under_3_seconds` đo cục bộ (bộ nhớ đệm ổ đĩa còn nóng): mở + trang 1 = 66 ms (500 trang chữ), 36 ms (500 trang scan). Bước CI đã viết; chưa đo khởi động nguội trên runner tham chiếu.
+  - Trạng thái: test `open_500_pages_under_3_seconds` đo cục bộ (bộ nhớ đệm ổ đĩa còn nóng): mở + trang 1 = 66 ms (500 trang chữ), 36 ms (500 trang scan). Trên CI GitHub Actions (windows-latest, lượt 42449738296): 39 ms (500 trang chữ), 25 ms (500 trang scan) — đạt. Chưa đánh dấu xong vì file vừa được tạo ngay trước khi đo nên có thể vẫn nằm trong bộ nhớ đệm ổ đĩa (chưa phải khởi động nguội đúng nghĩa), và runner không phải máy tham chiếu 8 GB.
 
 ## 3. Tìm chữ (`text-search`)
 
-- [ ] 3.1 Trích chữ chạy nền theo thứ tự ưu tiên trang, tạo chuỗi chuẩn hóa kèm bảng ánh xạ vị trí; xác minh bằng unit test với "Nghị định", "Đà Nẵng" và chữ có dấu tổ hợp
-- [ ] 3.2 Ô tìm khi đang gõ (chờ 150 ms, hủy lượt cũ), bộ đếm cập nhật dần, danh sách kết quả; xác minh kết quả đầu tiên hiện dưới 500 ms trên file 500 trang
-- [ ] 3.3 Tùy chọn Phân biệt dấu, Phân biệt hoa thường, Khớp nguyên từ; tìm vượt ngắt dòng; báo trang không có lớp chữ; xác minh bằng các scenario trong spec
+- [x] 3.1 Trích chữ chạy nền theo thứ tự ưu tiên trang, tạo chuỗi chuẩn hóa kèm bảng ánh xạ vị trí; xác minh bằng unit test với "Nghị định", "Đà Nẵng" và chữ có dấu tổ hợp
+  - Đã xác minh (Windows x64): worker PDFium trích chữ nền từ trang đang đọc ra hai phía, lượt tìm đang chờ thì trích theo thứ tự trang trước ảnh thu nhỏ (`background_extraction_priority`); `vpdf_search::normalize` (NFD, sắp thứ tự dấu, bỏ dấu, đ→d, chữ thường, gộp khoảng trắng) kèm bảng ánh xạ về ký tự gốc — unit test `folds_vietnamese`, `combining_order_is_canonical`, `map_points_back_to_source`; với PDF thật, vùng tô sáng của "Nghị định" và "Việt" (lưu dạng tổ hợp) khớp hộp ký tự gốc trong 0,6 pt.
+- [x] 3.2 Ô tìm khi đang gõ (chờ 150 ms, hủy lượt cũ), bộ đếm cập nhật dần, danh sách kết quả; xác minh kết quả đầu tiên hiện dưới 500 ms trên file 500 trang
+  - Đã xác minh: gõ "hợp đồng" (Ctrl+F, từng ký tự) ngay sau khi mở `text-500.pdf` → kết quả đầu tiên được tô đậm và nằm trong vùng xem sau 210–231 ms kể từ lần gõ cuối (`first_result_highlighted_within_500ms`; riêng luồng tìm 115 ms). Chờ 150 ms, gõ tiếp hủy lượt cũ, bộ đếm "1 / N…" khi đang quét, "Không tìm thấy", Enter/Shift+Enter/F3/Shift+F3 ("4 / 12"), bấm dòng kết quả ở trang 210: `tests/search_ui.rs`, `crates/vpdf-search/src/session.rs`, `crates/vpdf-search/tests/search.rs`.
+- [x] 3.3 Tùy chọn Phân biệt dấu, Phân biệt hoa thường, Khớp nguyên từ; tìm vượt ngắt dòng; báo trang không có lớp chữ; xác minh bằng các scenario trong spec
+  - Đã xác minh trên `search-vi.pdf` và `scan-mix-20.pdf` (file mẫu mới, tạo xác định bằng `vpdf-testdata generate-search`): "bán" chỉ khớp "bán" khi bật Phân biệt dấu; "an" không khớp "bang" khi bật Khớp nguyên từ; Phân biệt hoa thường; "trach nhiem huu han" bị xuống dòng được tô trên hai dòng, cụm có nhiều khoảng trắng cũng khớp; 20 trang có 15 trang chỉ có ảnh → "15 trang không có chữ để tìm. Chạy OCR?" (không báo "Không tìm thấy"). Nút "Chạy OCR" chỉ báo chức năng chưa có (OCR thuộc nhóm 9).
 
 ## 4. Gộp, tách, trích trang (`document-merge`, `document-split`)
 

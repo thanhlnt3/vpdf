@@ -20,7 +20,15 @@ pub struct ViewerOutput {
     pub missing_tiles: usize,
     /// Vùng xem (để vẽ chú thích nổi).
     pub rect: Option<Rect>,
+    /// Số kết quả tìm được tô sáng trên các trang đang thấy.
+    pub highlights: usize,
+    /// Vùng trên màn hình của kết quả đang chọn (nếu đang thấy).
+    pub current_hit_rects: Vec<Rect>,
 }
+
+/// Màu tô sáng mọi kết quả tìm, và kết quả đang chọn (đậm hơn).
+pub const HIT_FILL: Color32 = Color32::from_rgba_premultiplied(110, 92, 0, 110);
+pub const CURRENT_HIT_FILL: Color32 = Color32::from_rgba_premultiplied(125, 62, 0, 125);
 
 fn quantize_scale(s: f32) -> u32 {
     (s * 1000.0).round().max(1.0) as u32
@@ -170,6 +178,28 @@ pub fn show(ui: &mut Ui, tab: &mut DocTab, out: &mut ViewerOutput) {
                         prect.min + Vec2::new(c.rect.right * s, (size.height - c.rect.bottom) * s),
                     );
                     painter.rect_filled(r, CornerRadius::ZERO, Color32::from_rgba_unmultiplied(30, 100, 220, 80));
+                }
+            }
+        }
+
+        // kết quả tìm trên trang này
+        let (base, hits) = tab.search.hits_on_page(page);
+        let s = tab.view.scale();
+        for (k, h) in hits.iter().enumerate() {
+            let current = tab.search.current == Some(base + k);
+            out.highlights += 1;
+            for q in &h.rects {
+                let r = Rect::from_min_max(
+                    prect.min + Vec2::new(q.left * s, (size.height - q.top) * s),
+                    prect.min + Vec2::new(q.right * s, (size.height - q.bottom) * s),
+                )
+                .expand(1.0);
+                if current {
+                    painter.rect_filled(r, CornerRadius::same(2), CURRENT_HIT_FILL);
+                    painter.rect_stroke(r, CornerRadius::same(2), Stroke::new(1.5, Color32::from_rgb(220, 90, 0)), StrokeKind::Outside);
+                    out.current_hit_rects.push(r);
+                } else {
+                    painter.rect_filled(r, CornerRadius::same(2), HIT_FILL);
                 }
             }
         }
