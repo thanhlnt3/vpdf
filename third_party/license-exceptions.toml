@@ -1,0 +1,63 @@
+# Ngoại lệ license phải được người có thẩm quyền duyệt (specs/dependency-licensing,
+# "Ngoại lệ phải được duyệt"). Mỗi mục cần đủ: component, license, reason, reviewer,
+# date (YYYY-MM-DD). Thiếu một trong các trường đó thì kiểm tra license thất bại.
+#
+# CÁC MỤC DƯỚI ĐÂY CHƯA ĐƯỢC DUYỆT: reviewer và date đang để trống có chủ ý.
+# Người phụ trách pháp lý của dự án cần đọc lý do, rồi điền tên và ngày duyệt
+# (hoặc thay thành phần). Cho tới khi đó, `vpdf-license-check` sẽ báo thất bại.
+
+[[exception]]
+component = "Anti-Grain Geometry 2.3 (trong PDFium)"
+license = "LicenseRef-AGG-2.3"
+reason = "Giấy phép kiểu BSD rất ngắn (cho phép sao chép, sửa, bán, phân phối nếu giữ thông báo bản quyền); đi kèm PDFium."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "FreeType (trong PDFium)"
+license = "FTL"
+reason = "FreeType License kiểu BSD, yêu cầu ghi công trong tài liệu; PDFium dùng FreeType để dựng font. Không chọn nhánh GPL-2.0."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "HarfBuzz (trong PDFium)"
+license = "MIT-Modern-Variant"
+reason = "Biến thể 'Old MIT' của MIT, không thêm nghĩa vụ."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "libjpeg-turbo (trong PDFium)"
+license = "IJG"
+reason = "Giấy phép IJG kiểu BSD (yêu cầu ghi 'This software is based in part on the work of the Independent JPEG Group'). design.md D7 đã chấp nhận mozjpeg cùng loại."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "libpng (trong PDFium)"
+license = "libpng-2.0"
+reason = "PNG Reference Library License v2, kiểu zlib/BSD."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "LLVM libc (trong PDFium)"
+license = "Apache-2.0 WITH LLVM-exception"
+reason = "Apache-2.0 kèm ngoại lệ LLVM chỉ nới thêm quyền (bỏ yêu cầu ghi công cho dạng nhị phân)."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "zlib và libjpeg (liên kết tĩnh trong qpdf30.dll)"
+license = "IJG"
+reason = "Bản dựng qpdf chính thức cho Windows liên kết tĩnh libjpeg (IJG)."
+reviewer = ""
+date = ""
+
+[[exception]]
+component = "Microsoft Visual C++ runtime (msvcp140.dll, vcruntime140*.dll kèm qpdf)"
+license = "LicenseRef-Microsoft-VC-Redist"
+reason = "Runtime C++ được Microsoft cho phép phân phối kèm ứng dụng. Phương án khác: dựng qpdf liên kết tĩnh runtime (/MT) để bỏ hẳn các DLL này."
+reviewer = ""
+date = ""

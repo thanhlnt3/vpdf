@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "note": "Mã băm SHA-256 của bộ tài liệu tham chiếu. File deterministic=false (mã hóa) có muối ngẫu nhiên; khi tạo tại chỗ chúng được kiểm tra bằng cách mở với đúng mật khẩu.",
+  "files": [
+    {
+      "name": "text-500.pdf",
+      "sha256": "2418fcecfb48077c4dbb5584bdbe2811425e51a45727fc94f19f9738d2758e73",
+      "bytes": 57714253,
+      "deterministic": true,
+      "purpose": "500 trang chữ tiếng Việt có ảnh minh họa, mục lục UTF-16, link nội bộ và URL"
+    },
+    {
+      "name": "scan-500.pdf",
+      "sha256": "70b4447bd860616245c5112ab63b6b029fbf438443d089f04c09fe3119803395",
+      "bytes": 146137736,
+      "deterministic": true,
+      "purpose": "500 trang scan (ảnh JPEG xám), không có lớp chữ"
+    },
+    {
+      "name": "small-vi.pdf",
+      "sha256": "d1145320f49b79188de03d2f39a0021351b1370fb679dae5ca0b6dd076323b36",
+      "bytes": 1170339,
+      "deterministic": true,
+      "purpose": "40 trang chữ tiếng Việt có mục lục và link (mẫu nhỏ cho kiểm thử giao diện)"
+    },
+    {
+      "name": "form.pdf",
+      "sha256": "2cc3c5ca624395a1d0b934b67269f814fe6c376c8b25bf2f879fe1251967db5d",
+      "bytes": 1420,
+      "deterministic": true,
+      "purpose": "Form AcroForm: trường chữ ho_ten và ô đánh dấu dong_y"
+    },
+    {
+      "name": "password.pdf",
+      "sha256": "1e97fcb54decf7bd576031fa003fa4ad1ac243cd1a938ed7e41181c825465769",
+      "bytes": 1176683,
+      "deterministic": false,
+      "purpose": "Mật khẩu mở AES-256 R6 (matkhau123), mật khẩu chủ sở hữu chusohuu456"
+    },
+    {
+      "name": "no-copy.pdf",
+      "sha256": "f4426e94e9d7874f8977422a03693b13851a6438391c89f6e683fbb1a5ac3015",
+      "bytes": 1176686,
+      "deterministic": false,
+      "purpose": "Mở không cần mật khẩu nhưng cấm sao chép và in; mật khẩu chủ sở hữu chusohuu456"
+    },
+    {
+      "name": "broken-xref.pdf",
+      "sha256": "b12ce577bfea18a83409629431a960f86e803357785ac46fb309630eb63cf06d",
+      "bytes": 1170403,
+      "deterministic": true,
+      "purpose": "Bảng xref lệch vị trí nhưng các trang vẫn khôi phục được"
+    },
+    {
+      "name": "not-a-pdf.pdf",
+      "sha256": "ffa1a3c3bca65160dd71f095b598edcdd052bb554ed6718792fff28f2c6b98fb",
+      "bytes": 1520,
+      "deterministic": true,
+      "purpose": "Đuôi .pdf nhưng nội dung không phải PDF"
+    }
+  ]
+}

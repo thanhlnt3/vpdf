@@ -1,0 +1,144 @@
+# Thành phần KHÔNG phải crate Rust đi kèm bản phát hành (task 1.2, specs/dependency-licensing):
+# thư viện native, font, dữ liệu. Kiểm tra bằng: cargo run -p vpdf-license-check
+#
+# license: biểu thức SPDX ("A OR B" = chọn một; "A AND B" = phải thỏa cả hai).
+# License ngoài danh sách cho phép chỉ được chấp nhận khi có mục đã duyệt trong
+# third_party/license-exceptions.toml (đủ lý do, người duyệt, ngày duyệt).
+# Mục "shipped = false" là công cụ chỉ dùng lúc dựng/kiểm thử, không đi kèm sản phẩm.
+
+[[component]]
+name = "PDFium"
+version = "chromium/8138 (bblanchon/pdfium-binaries)"
+license = "BSD-3-Clause"
+source = "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium/8138"
+notice = "third_party/pdfium/win-x64/LICENSE"
+shipped = true
+
+[[component]]
+name = "Abseil (trong PDFium)"
+license = "Apache-2.0"
+notice = "third_party/pdfium/win-x64/licenses/abseil.txt"
+shipped = true
+
+[[component]]
+name = "Anti-Grain Geometry 2.3 (trong PDFium)"
+license = "LicenseRef-AGG-2.3"
+notice = "third_party/pdfium/win-x64/licenses/agg23.txt"
+shipped = true
+
+[[component]]
+name = "Dragonbox (trong PDFium)"
+license = "Apache-2.0 WITH LLVM-exception OR BSL-1.0"
+notice = "third_party/pdfium/win-x64/licenses/dragonbox-Boost.txt"
+shipped = true
+
+[[component]]
+name = "fast_float (trong PDFium)"
+license = "MIT"
+notice = "third_party/pdfium/win-x64/licenses/fast_float.txt"
+shipped = true
+
+[[component]]
+name = "FreeType (trong PDFium)"
+license = "FTL"
+notice = "third_party/pdfium/win-x64/licenses/freetype.txt"
+shipped = true
+
+[[component]]
+name = "HarfBuzz (trong PDFium)"
+license = "MIT-Modern-Variant"
+notice = "third_party/pdfium/win-x64/licenses/harfbuzz.txt"
+shipped = true
+
+[[component]]
+name = "Highway (trong PDFium)"
+license = "Apache-2.0"
+notice = "third_party/pdfium/win-x64/licenses/highway.txt"
+shipped = true
+
+[[component]]
+name = "ICU (trong PDFium)"
+license = "Unicode-3.0"
+notice = "third_party/pdfium/win-x64/licenses/icu.txt"
+shipped = true
+
+[[component]]
+name = "Little CMS (trong PDFium)"
+license = "MIT"
+notice = "third_party/pdfium/win-x64/licenses/lcms.txt"
+shipped = true
+
+[[component]]
+name = "libjpeg-turbo (trong PDFium)"
+license = "IJG AND BSD-3-Clause AND Zlib"
+notice = "third_party/pdfium/win-x64/licenses/libjpeg_turbo.md"
+shipped = true
+
+[[component]]
+name = "OpenJPEG (trong PDFium)"
+license = "BSD-2-Clause"
+notice = "third_party/pdfium/win-x64/licenses/libopenjpeg.txt"
+shipped = true
+
+[[component]]
+name = "libpng (trong PDFium)"
+license = "libpng-2.0"
+notice = "third_party/pdfium/win-x64/licenses/libpng.txt"
+shipped = true
+
+[[component]]
+name = "LLVM libc (trong PDFium)"
+license = "Apache-2.0 WITH LLVM-exception"
+notice = "third_party/pdfium/win-x64/licenses/llvm-libc.txt"
+shipped = true
+
+[[component]]
+name = "simdutf (trong PDFium)"
+license = "Apache-2.0 OR MIT"
+notice = "third_party/pdfium/win-x64/licenses/simdutf.txt"
+shipped = true
+
+[[component]]
+name = "zlib (trong PDFium)"
+license = "Zlib"
+notice = "third_party/pdfium/win-x64/licenses/zlib.txt"
+shipped = true
+
+[[component]]
+name = "qpdf"
+version = "12.4.2 (msvc64)"
+license = "Apache-2.0"
+source = "https://github.com/qpdf/qpdf/releases/tag/v12.4.2"
+notice = "third_party/qpdf/win-x64/qpdf-12.4.2-msvc64/share/doc/qpdf/manual-html/_sources/license.rst.txt"
+shipped = true
+
+[[component]]
+name = "zlib và libjpeg (liên kết tĩnh trong qpdf30.dll)"
+license = "Zlib AND IJG"
+source = "https://github.com/qpdf/qpdf/releases/tag/v12.4.2"
+shipped = true
+
+[[component]]
+name = "Microsoft Visual C++ runtime (msvcp140.dll, vcruntime140*.dll kèm qpdf)"
+license = "LicenseRef-Microsoft-VC-Redist"
+source = "https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files"
+shipped = true
+
+[[component]]
+name = "Noto Sans (font giao diện và font nhúng)"
+license = "OFL-1.1"
+source = "https://github.com/notofonts/notofonts.github.io"
+notice = "assets/fonts/OFL.txt"
+shipped = true
+
+[[component]]
+name = "File PDF mẫu (assets/sample, testdata) do dự án tự tạo"
+license = "Apache-2.0"
+source = "tools/vpdf-testdata"
+shipped = true
+
+[[component]]
+name = "cargo-deny (công cụ kiểm tra, không đi kèm sản phẩm)"
+license = "MIT OR Apache-2.0"
+source = "https://github.com/EmbarkStudios/cargo-deny/releases/tag/0.20.2"
+shipped = false

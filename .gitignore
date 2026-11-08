@@ -1,0 +1,9 @@
+/target
+/shots
+# Bộ tài liệu tham chiếu lớn (~210 MB): tạo hoặc tải bằng scripts/fetch-testdata.*; MANIFEST.json được giữ.
+/testdata/reference/
+# Thư viện native tải bằng scripts/fetch-native.*
+/third_party/pdfium/
+/third_party/qpdf/
+# Công cụ tải về cục bộ
+/tools/bin/

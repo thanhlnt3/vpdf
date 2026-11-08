@@ -1,0 +1,9 @@
+[package]
+name = "vpdf-ocr"
+description = "OCR tiếng Việt offline (Tesseract) — nhóm task 9, chưa làm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

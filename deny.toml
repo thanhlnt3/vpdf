@@ -1,0 +1,55 @@
+# Kiểm tra license của toàn bộ cây phụ thuộc Rust (specs/dependency-licensing).
+# Chạy: cargo deny check licenses
+# Thư viện native, font và dữ liệu không phải crate được kiểm tra riêng bằng
+# `cargo run -p vpdf-license-check` dựa trên third_party/native.toml.
+
+[graph]
+# Các nền tảng phát hành (specs/platform-support).
+targets = ["x86_64-pc-windows-msvc", "aarch64-apple-darwin", "x86_64-apple-darwin"]
+all-features = false
+
+[licenses]
+# Danh sách cho phép, đúng như specs/dependency-licensing.
+# MPL-2.0 chỉ được dùng nguyên vẹn, không sửa file (kiểm tra thủ công khi duyệt).
+allow = [
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Apache-2.0",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "OFL-1.1",
+    "CC0-1.0",
+    "MPL-2.0",
+]
+# Crate không khai báo license hoặc không nhận diện được license thì bị từ chối.
+confidence-threshold = 0.93
+unused-allowed-license = "allow"
+# Crate của chính dự án (publish = false) không cần khai báo.
+private = { ignore = true }
+
+# Ngoại lệ: mỗi crate ở đây PHẢI có mục tương ứng (lý do, người duyệt, ngày duyệt)
+# trong third_party/license-exceptions.toml; vpdf-license-check kiểm tra điều này.
+exceptions = []
+
+[bans]
+multiple-versions = "allow"
+wildcards = "allow"
+# Chặn tên các engine copyleft đã loại ở design.md, phòng khi có crate bọc chúng.
+deny = [
+    { name = "mupdf" },
+    { name = "mupdf-sys" },
+    { name = "poppler" },
+    { name = "poppler-rs" },
+    { name = "ghostscript" },
+]
+
+[advisories]
+version = 2
+yanked = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

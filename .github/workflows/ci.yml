@@ -1,0 +1,56 @@
+# CI cho VPdf (tasks.md nhóm 1–2). Chạy trên Windows x64, macOS Apple silicon và macOS Intel.
+# Lưu ý: workflow này nằm trong app/; khi đưa app/ thành gốc kho mã, đường dẫn giữ nguyên.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  licenses:
+    # task 1.2: PR thêm crate GPL/AGPL hoặc không rõ license thì bước này thất bại.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses
+      - uses: dtolnay/rust-toolchain@stable
+      - name: License thư viện native, font, dữ liệu (third_party/native.toml)
+        run: cargo run -p vpdf-license-check
+
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, plat: win-x64 }
+          - { os: macos-14, plat: mac-arm64 }   # Apple silicon
+          - { os: macos-13, plat: mac-x64 }     # Intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Tải PDFium và qpdf (kiểm tra SHA-256)
+        shell: bash
+        run: scripts/fetch-native.sh ${{ matrix.plat }}
+      - name: cargo build --workspace (task 1.1)
+        run: cargo build --workspace
+      - name: Bộ tài liệu tham chiếu (task 1.5)
+        shell: bash
+        run: scripts/fetch-testdata.sh
+        env:
+          VPDF_TESTDATA_URL: ${{ vars.VPDF_TESTDATA_URL }}
+      - name: Kiểm thử (dựng trang 1 — task 1.3; qpdf/lopdf — 1.4; đọc tài liệu — nhóm 2)
+        run: cargo test --workspace --release
+      - name: Đo mở file 500 trang (task 2.7)
+        run: cargo test --release -p vpdf-render --test viewing open_500_pages_under_3_seconds -- --nocapture
+
+  mac-universal:
+    # task 1.3: ghép libpdfium.dylib universal bằng lipo.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/fetch-native.sh mac-universal
+      - run: lipo -archs third_party/pdfium/mac-universal/lib/libpdfium.dylib | grep -q "x86_64 arm64"

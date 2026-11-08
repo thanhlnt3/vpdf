@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "values": [
+    {
+      "name": "zoom minimum",
+      "group": "zoom",
+      "value": 10,
+      "unit": "%",
+      "source": "specs/document-viewing/spec.md: Phóng to và thu nhỏ"
+    },
+    {
+      "name": "zoom maximum",
+      "group": "zoom",
+      "value": 6400,
+      "unit": "%",
+      "source": "specs/document-viewing/spec.md: Phóng to và thu nhỏ"
+    },
+    {
+      "name": "actual size",
+      "group": "zoom",
+      "value": 1.3333,
+      "unit": "logical px per PDF point at 100%",
+      "estimated": true
+    },
+    {
+      "name": "zoom step",
+      "group": "zoom",
+      "value": 1.25,
+      "unit": "factor",
+      "estimated": true
+    },
+    {
+      "name": "zoom at cursor keeps point",
+      "group": "zoom",
+      "value": true,
+      "source": "specs/document-viewing/spec.md: Phóng tại con trỏ"
+    },
+    {
+      "name": "fit width kept on resize",
+      "group": "zoom",
+      "value": true,
+      "source": "specs/document-viewing/spec.md: Vừa chiều rộng"
+    },
+    {
+      "name": "page gap",
+      "group": "layout",
+      "value": 10,
+      "unit": "logical px",
+      "estimated": true
+    },
+    {
+      "name": "document margin",
+      "group": "layout",
+      "value": 10,
+      "unit": "logical px",
+      "estimated": true
+    },
+    {
+      "name": "scrollbar width",
+      "group": "layout",
+      "value": 12,
+      "unit": "logical px",
+      "estimated": true
+    },
+    {
+      "name": "default layout",
+      "group": "navigation",
+      "value": "continuous",
+      "source": "specs/document-viewing/spec.md: Cuộn và điều hướng"
+    },
+    {
+      "name": "arrow key scroll",
+      "group": "navigation",
+      "value": 48,
+      "unit": "logical px",
+      "estimated": true
+    },
+    {
+      "name": "page down scroll",
+      "group": "navigation",
+      "value": "viewport height - 48",
+      "estimated": true
+    },
+    {
+      "name": "back history length",
+      "group": "navigation",
+      "value": 100,
+      "unit": "positions",
+      "estimated": true
+    },
+    {
+      "name": "page cache",
+      "group": "memory",
+      "value": 300,
+      "unit": "MB",
+      "source": "design.md: Risks / Trade-offs (LRU 300 MB)"
+    },
+    {
+      "name": "thumbnail cache",
+      "group": "memory",
+      "value": 48,
+      "unit": "MB",
+      "estimated": true
+    },
+    {
+      "name": "tile size",
+      "group": "memory",
+      "value": 512,
+      "unit": "device px",
+      "estimated": true
+    },
+    {
+      "name": "thumbnail width",
+      "group": "memory",
+      "value": 120,
+      "unit": "device px",
+      "estimated": true
+    },
+    {
+      "name": "open 500 pages limit",
+      "group": "performance",
+      "value": 3,
+      "unit": "s",
+      "source": "specs/performance/spec.md"
+    },
+    {
+      "name": "memory limit",
+      "group": "performance",
+      "value": 1024,
+      "unit": "MB",
+      "source": "specs/performance/spec.md"
+    },
+    {
+      "name": "recent files remembered",
+      "group": "recent",
+      "value": 50,
+      "unit": "files",
+      "source": "specs/document-viewing/spec.md: Nhớ vị trí đọc"
+    },
+    {
+      "name": "password retries",
+      "group": "security",
+      "value": "unlimited",
+      "source": "specs/document-viewing/spec.md: Mở file có mật khẩu"
+    },
+    {
+      "name": "copy normalization",
+      "group": "text",
+      "value": "NFC",
+      "source": "specs/document-viewing/spec.md: Chọn và sao chép chữ"
+    },
+    {
+      "name": "zoom in/out keys",
+      "group": "controls",
+      "value": "Ctrl/Cmd + = / -",
+      "estimated": true
+    },
+    {
+      "name": "fit page / actual / fit width keys",
+      "group": "controls",
+      "value": "Ctrl/Cmd + 0 / 1 / 2",
+      "estimated": true
+    },
+    {
+      "name": "back key",
+      "group": "controls",
+      "value": "Alt + Left",
+      "estimated": true
+    },
+    {
+      "name": "select text",
+      "group": "controls",
+      "value": "left-drag on page",
+      "estimated": true
+    },
+    {
+      "name": "pan",
+      "group": "controls",
+      "value": "middle-drag",
+      "estimated": true
+    }
+  ]
+}

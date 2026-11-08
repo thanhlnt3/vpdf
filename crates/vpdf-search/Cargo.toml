@@ -1,0 +1,9 @@
+[package]
+name = "vpdf-search"
+description = "Tìm chữ (không phân biệt dấu tiếng Việt) — nhóm task 3, chưa làm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

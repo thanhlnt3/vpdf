@@ -1,0 +1,15 @@
+[package]
+name = "vpdf-render"
+description = "Dựng hình và trích chữ bằng PDFium; mỗi tài liệu một luồng worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vpdf-core.workspace = true
+pdfium-render.workspace = true
+
+[dev-dependencies]
+memory-stats.workspace = true
+unicode-normalization.workspace = true

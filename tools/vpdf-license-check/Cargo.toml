@@ -1,0 +1,11 @@
+[package]
+name = "vpdf-license-check"
+description = "Kiểm tra license của thư viện native, font, dữ liệu (third_party/native.toml) và ngoại lệ đã duyệt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+toml = "0.9"

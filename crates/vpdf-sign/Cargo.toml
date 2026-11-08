@@ -1,0 +1,9 @@
+[package]
+name = "vpdf-sign"
+description = "Ký số và kiểm tra chữ ký — nhóm task 10, chưa làm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

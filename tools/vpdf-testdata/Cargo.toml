@@ -1,0 +1,17 @@
+[package]
+name = "vpdf-testdata"
+description = "Tạo, tải về và kiểm tra mã băm bộ tài liệu tham chiếu (task 1.5)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vpdf-core.workspace = true
+vpdf-render.workspace = true
+pdfium-render.workspace = true
+lopdf.workspace = true
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+sha2.workspace = true
+serde.workspace = true
+serde_json.workspace = true

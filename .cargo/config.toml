@@ -1,0 +1,4 @@
+# Thư mục dự án nằm rất sâu, nên đường dẫn file tạm của build script vượt 260 ký tự,
+# mà link.exe của MSVC không hỗ trợ đường dẫn dài. rust-lld (đi kèm Rust) thì có.
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
